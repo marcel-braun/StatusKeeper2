@@ -6,73 +6,102 @@ namespace StatusKeeperTerminalApp.Services;
 public class MouseMovementService : IMouseMovementService
 {
     private readonly ILogger<MouseMovementService> _logger;
+    private readonly IGlobalStateService _globalState;
     private readonly Random _random = new Random();
+    private CancellationTokenSource? _cancellationTokenSource;
 
-    public MouseMovementService(ILogger<MouseMovementService> logger)
+    public MouseMovementService(ILogger<MouseMovementService> logger, IGlobalStateService globalState)
     {
         _logger = logger;
+        _globalState = globalState;
     }
 
     public async Task StartAsync(MouseMovementConfig config, CancellationToken cancellationToken = default)
     {
+        _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var token = _cancellationTokenSource.Token;
+        
+        _globalState.IsServiceRunning = true;
+        _globalState.AddLog("Mouse Movement Service gestartet");
+        
         _logger.LogInformation("Mouse Movement Service gestartet");
         _logger.LogInformation($"Arbeitszeit: {config.WorkStartTime:hh\\:mm} (±{config.WorkStartVarianceMinutes}min) bis {config.WorkEndTime?.ToString(@"hh\:mm") ?? "kein Ende"} (±{config.WorkEndVarianceMinutes}min)");
         _logger.LogInformation($"Mittagspause: {config.LunchBreakStart:hh\\:mm} - {config.LunchBreakEnd:hh\\:mm}");
 
         var actualWorkEnd = CalculateActualWorkEnd(config);
+        _globalState.AddLog($"Heutiges Arbeitsende: {actualWorkEnd:hh\\:mm}");
         _logger.LogInformation($"Heutiges Arbeitsende: {actualWorkEnd:hh\\:mm}");
 
         var lunchBreakTaken = false;
 
-        while (!cancellationToken.IsCancellationRequested)
+        try
         {
-            var now = DateTime.Now.TimeOfDay;
+            while (!token.IsCancellationRequested)
+            {
+                var now = DateTime.Now.TimeOfDay;
 
-            // Prüfen ob Arbeitsende erreicht
-            if (config.WorkEndTime.HasValue && now >= actualWorkEnd)
-            {
-                _logger.LogInformation("Arbeitsende erreicht. Service wird beendet.");
-                break;
-            }
+                // Prüfen ob Arbeitsende erreicht
+                if (config.WorkEndTime.HasValue && now >= actualWorkEnd)
+                {
+                    _globalState.AddLog("Arbeitsende erreicht. Service wird beendet.");
+                    _logger.LogInformation("Arbeitsende erreicht. Service wird beendet.");
+                    break;
+                }
 
-            // Prüfen ob Mittagspause
-            if (!lunchBreakTaken && IsInLunchBreakWindow(now, config))
-            {
-                var lunchDuration = _random.Next(config.MinLunchBreakMinutes, config.MaxLunchBreakMinutes + 1);
-                _logger.LogInformation($"Mittagspause startet - Dauer: {lunchDuration} Minuten");
-                await Task.Delay(TimeSpan.FromMinutes(lunchDuration), cancellationToken);
-                lunchBreakTaken = true;
-                _logger.LogInformation("Mittagspause beendet");
-                continue;
-            }
+                // Prüfen ob Mittagspause
+                if (!lunchBreakTaken && IsInLunchBreakWindow(now, config))
+                {
+                    var lunchDuration = _random.Next(config.MinLunchBreakMinutes, config.MaxLunchBreakMinutes + 1);
+                    _globalState.AddLog($"Mittagspause startet - Dauer: {lunchDuration} Minuten");
+                    _logger.LogInformation($"Mittagspause startet - Dauer: {lunchDuration} Minuten");
+                    await Task.Delay(TimeSpan.FromMinutes(lunchDuration), token);
+                    lunchBreakTaken = true;
+                    _globalState.AddLog("Mittagspause beendet");
+                    _logger.LogInformation("Mittagspause beendet");
+                    continue;
+                }
 
-            // Normale Mausbewegung
-            try
-            {
-                MoveMouse(config);
-                _logger.LogDebug("Maus bewegt");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Fehler beim Bewegen der Maus");
-            }
+                // Normale Mausbewegung
+                try
+                {
+                    MoveMouse(config);
+                    _logger.LogDebug("Maus bewegt");
+                }
+                catch (Exception ex)
+                {
+                    _globalState.AddLog($"Fehler beim Bewegen der Maus: {ex.Message}");
+                    _logger.LogError(ex, "Fehler beim Bewegen der Maus");
+                }
 
-            // Zufällige Pause?
-            if (_random.Next(100) < config.BreakProbabilityPercent)
-            {
-                var breakDuration = _random.Next(config.MinBreakMinutes, config.MaxBreakMinutes + 1);
-                _logger.LogInformation($"Kurze Pause: {breakDuration} Minuten");
-                await Task.Delay(TimeSpan.FromMinutes(breakDuration), cancellationToken);
-            }
-            else
-            {
-                // Normales Intervall mit Varianz
-                var interval = _random.Next(config.MinIntervalSeconds, config.MaxIntervalSeconds + 1);
-                await Task.Delay(TimeSpan.FromSeconds(interval), cancellationToken);
+                // Zufällige Pause?
+                if (_random.Next(100) < config.BreakProbabilityPercent)
+                {
+                    var breakDuration = _random.Next(config.MinBreakMinutes, config.MaxBreakMinutes + 1);
+                    _globalState.AddLog($"Kurze Pause: {breakDuration} Minuten");
+                    _logger.LogInformation($"Kurze Pause: {breakDuration} Minuten");
+                    await Task.Delay(TimeSpan.FromMinutes(breakDuration), token);
+                }
+                else
+                {
+                    // Normales Intervall mit Varianz
+                    var interval = _random.Next(config.MinIntervalSeconds, config.MaxIntervalSeconds + 1);
+                    await Task.Delay(TimeSpan.FromSeconds(interval), token);
+                }
             }
         }
+        finally
+        {
+            _globalState.IsServiceRunning = false;
+            _globalState.AddLog("Mouse Movement Service beendet");
+            _logger.LogInformation("Mouse Movement Service beendet");
+        }
+    }
 
-        _logger.LogInformation("Mouse Movement Service beendet");
+    public void Stop()
+    {
+        _cancellationTokenSource?.Cancel();
+        _globalState.AddLog("Mouse Movement Service Stop angefordert");
+        _logger.LogInformation("Mouse Movement Service Stop angefordert");
     }
 
     private TimeSpan CalculateActualWorkEnd(MouseMovementConfig config)

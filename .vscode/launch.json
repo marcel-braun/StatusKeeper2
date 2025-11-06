@@ -9,7 +9,7 @@
       "program": "${workspaceFolder}/StatusKeeperTerminalApp/bin/Debug/net9.0/StatusKeeperTerminalApp.dll",
       "args": [],
       "cwd": "${workspaceFolder}/StatusKeeperTerminalApp",
-      "console": "integratedTerminal",
+      "console": "externalTerminal",
       "stopAtEntry": false,
       "env": {
         "DOTNET_ENVIRONMENT": "Development"

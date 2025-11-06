@@ -6,6 +6,11 @@ public interface IMouseMovementService
     /// Startet den Mouse Movement Service mit den angegebenen Parametern
     /// </summary>
     Task StartAsync(MouseMovementConfig config, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Stoppt den Mouse Movement Service
+    /// </summary>
+    void Stop();
 }
 
 public class MouseMovementConfig
