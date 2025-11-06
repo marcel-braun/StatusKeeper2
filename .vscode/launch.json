@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch StatusKeeperTerminalApp",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/StatusKeeperTerminalApp/bin/Debug/net9.0/StatusKeeperTerminalApp.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/StatusKeeperTerminalApp",
+      "console": "integratedTerminal",
+      "stopAtEntry": false,
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  ]
+}
