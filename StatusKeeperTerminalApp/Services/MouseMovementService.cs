@@ -117,16 +117,132 @@ public class MouseMovementService : IMouseMovementService
         var newX = currentPos.X + deltaX;
         var newY = currentPos.Y + deltaY;
 
-        SetCursorPos(newX, newY);
+    SetCursorPosPlatform(newX, newY);
     }
+
+    #region Platform-specific Mouse Movement
+
+    private bool GetCursorPos(out POINT lpPoint)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return GetCursorPosWindows(out lpPoint);
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            return GetCursorPosMacOS(out lpPoint);
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            _logger.LogWarning("Linux wird aktuell nicht unterstützt");
+            lpPoint = new POINT();
+            return false;
+        }
+        else
+        {
+            _logger.LogWarning("Betriebssystem wird nicht unterstützt");
+            lpPoint = new POINT();
+            return false;
+        }
+    }
+
+    private void SetCursorPosPlatform(int x, int y)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            SetCursorPos(x, y);
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            SetCursorPosMacOS(x, y);
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            _logger.LogWarning("Linux wird aktuell nicht unterstützt");
+        }
+        else
+        {
+            _logger.LogWarning("Betriebssystem wird nicht unterstützt");
+        }
+    }
+
+    #endregion
 
     #region Windows API
 
     [DllImport("user32.dll")]
     private static extern bool SetCursorPos(int X, int Y);
 
-    [DllImport("user32.dll")]
-    private static extern bool GetCursorPos(out POINT lpPoint);
+    [DllImport("user32.dll", EntryPoint = "GetCursorPos")]
+    private static extern bool GetCursorPosWindows(out POINT lpPoint);
+
+    #endregion
+
+    #region macOS API
+
+    [DllImport("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")]
+    private static extern void CGWarpMouseCursorPosition(CGPoint newCursorPosition);
+
+    [DllImport("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")]
+    private static extern CGPoint CGEventGetLocation(IntPtr eventRef);
+
+    [DllImport("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")]
+    private static extern IntPtr CGEventCreate(IntPtr source);
+
+    [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
+    private static extern void CFRelease(IntPtr cf);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct CGPoint
+    {
+        public double X;
+        public double Y;
+    }
+
+    private bool GetCursorPosMacOS(out POINT lpPoint)
+    {
+        try
+        {
+            IntPtr eventRef = CGEventCreate(IntPtr.Zero);
+            if (eventRef == IntPtr.Zero)
+            {
+                lpPoint = new POINT();
+                return false;
+            }
+
+            CGPoint location = CGEventGetLocation(eventRef);
+            CFRelease(eventRef);
+
+            lpPoint = new POINT
+            {
+                X = (int)location.X,
+                Y = (int)location.Y
+            };
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fehler beim Abrufen der Mausposition auf macOS");
+            lpPoint = new POINT();
+            return false;
+        }
+    }
+
+    private void SetCursorPosMacOS(int x, int y)
+    {
+        try
+        {
+            CGWarpMouseCursorPosition(new CGPoint { X = x, Y = y });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fehler beim Setzen der Mausposition auf macOS");
+        }
+    }
+
+    #endregion
+
+    #region Shared Structures
 
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT

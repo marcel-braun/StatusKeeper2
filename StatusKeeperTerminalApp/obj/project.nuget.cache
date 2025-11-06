@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "LV7X72h/9gw=",
+  "dgSpecHash": "y9ARgJlNm8c=",
   "success": true,
   "projectFilePath": "C:\\Users\\mbraun12\\source\\Repos\\Status-Keeper 2\\StatusKeeperTerminalApp\\StatusKeeperTerminalApp.csproj",
   "expectedPackageFiles": [
@@ -31,7 +31,11 @@
     "C:\\Users\\mbraun12\\.nuget\\packages\\microsoft.extensions.options\\9.0.10\\microsoft.extensions.options.9.0.10.nupkg.sha512",
     "C:\\Users\\mbraun12\\.nuget\\packages\\microsoft.extensions.options.configurationextensions\\9.0.10\\microsoft.extensions.options.configurationextensions.9.0.10.nupkg.sha512",
     "C:\\Users\\mbraun12\\.nuget\\packages\\microsoft.extensions.primitives\\9.0.10\\microsoft.extensions.primitives.9.0.10.nupkg.sha512",
-    "C:\\Users\\mbraun12\\.nuget\\packages\\system.diagnostics.eventlog\\9.0.10\\system.diagnostics.eventlog.9.0.10.nupkg.sha512"
+    "C:\\Users\\mbraun12\\.nuget\\packages\\microsoft.net.illink.tasks\\9.0.1\\microsoft.net.illink.tasks.9.0.1.nupkg.sha512",
+    "C:\\Users\\mbraun12\\.nuget\\packages\\system.diagnostics.eventlog\\9.0.10\\system.diagnostics.eventlog.9.0.10.nupkg.sha512",
+    "C:\\Users\\mbraun12\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\9.0.1\\microsoft.netcore.app.runtime.win-x64.9.0.1.nupkg.sha512",
+    "C:\\Users\\mbraun12\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\9.0.1\\microsoft.windowsdesktop.app.runtime.win-x64.9.0.1.nupkg.sha512",
+    "C:\\Users\\mbraun12\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\9.0.1\\microsoft.aspnetcore.app.runtime.win-x64.9.0.1.nupkg.sha512"
   ],
   "logs": []
 }

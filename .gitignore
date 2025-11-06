@@ -1,0 +1,83 @@
+# .gitignore for C#/.NET projects
+# Build results
+[Dd]ebug/
+[Rr]elease/
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+
+# Rider
+.idea/
+*.sln.iml
+
+# NuGet packages
+*.nupkg
+# The packages folder can be ignored if not using NuGet restore
+packages/
+# NuGet v3's project.json files
+project.lock.json
+
+# Windows image file caches
+Thumbs.db
+
+# Publish output
+publish/
+
+# Others
+*.log
+*.vspscc
+*.vssscc
+*.dbmdl
+*.pdb
+*.cache
+*.config
+*.orig
+*.bak
+*.tmp
+*.swp
+*.swo
+
+# DotCover
+*.dotCover
+
+# Resharper
+*.DotSettings.user
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# Entity Framework
+Migrations/
+
+# Local history for Visual Studio
+.localhistory/
+
+# Test results
+TestResults/
+
+# NCrunch
+.ncrunch*
+_NCrunch_*
+
+# StyleCop
+StyleCopReport.xml
+
+# Files built by Visual Studio
+*.Build.cs
+*.Build.props
+*.Build.targets
+
+# Others
+*.vs/
