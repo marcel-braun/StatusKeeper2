@@ -4,6 +4,7 @@
 [Rr]elease/
 bin/
 obj/
+releases/
 
 # User-specific files
 *.user
