@@ -10,6 +10,7 @@ public class ConfigurationView : Window
     private MouseMovementProfile? _currentProfile;
     private ListView _profileListView = null!;
     private TextField[] _configFields = null!;
+    private CheckBox _debugModeCheckBox = null!;
 
     public ConfigurationView(IConfigurationService configService)
     {
@@ -102,42 +103,63 @@ public class ConfigurationView : Window
             Height = Dim.Fill() - 5  // Platz für Buttons unten lassen
         };
 
+        // ScrollView für die Konfiguration hinzufügen
+        var scrollView = new ScrollView()
+        {
+            X = 0,
+            Y = 0,
+            Width = Dim.Fill(),
+            Height = Dim.Fill(),
+            ContentSize = new Size(50, 30), // Genügend Platz für alle Felder
+            ShowVerticalScrollIndicator = true
+        };
+        
+        configFrame.Add(scrollView);
+
         _configFields = new TextField[15];
         int yPos = 0;
 
         // Mausbewegung
-        AddLabel(configFrame, "=== Mausbewegung ===", ref yPos);
-        AddField(configFrame, "Min Distanz (Pixel):", ref yPos, 0);
-        AddField(configFrame, "Max Distanz (Pixel):", ref yPos, 1);
+        AddLabel(scrollView, "=== Mausbewegung ===", ref yPos);
+        AddField(scrollView, "Min Distanz (Pixel):", ref yPos, 0);
+        AddField(scrollView, "Max Distanz (Pixel):", ref yPos, 1);
 
         // Zeitintervalle
         yPos++;
-        AddLabel(configFrame, "=== Zeitintervalle ===", ref yPos);
-        AddField(configFrame, "Min Intervall (Sek):", ref yPos, 2);
-        AddField(configFrame, "Max Intervall (Sek):", ref yPos, 3);
+        AddLabel(scrollView, "=== Zeitintervalle ===", ref yPos);
+        AddField(scrollView, "Min Intervall (Sek):", ref yPos, 2);
+        AddField(scrollView, "Max Intervall (Sek):", ref yPos, 3);
 
         // Kurze Pausen
         yPos++;
-        AddLabel(configFrame, "=== Kurze Pausen ===", ref yPos);
-        AddField(configFrame, "Min Pause (Min):", ref yPos, 4);
-        AddField(configFrame, "Max Pause (Min):", ref yPos, 5);
-        AddField(configFrame, "Wahrscheinlichkeit (%):", ref yPos, 6);
+        AddLabel(scrollView, "=== Kurze Pausen ===", ref yPos);
+        AddField(scrollView, "Min Pause (Min):", ref yPos, 4);
+        AddField(scrollView, "Max Pause (Min):", ref yPos, 5);
+        AddField(scrollView, "Wahrscheinlichkeit (%):", ref yPos, 6);
 
         // Mittagspause
         yPos++;
-        AddLabel(configFrame, "=== Mittagspause ===", ref yPos);
-        AddField(configFrame, "Start (HH:MM):", ref yPos, 7);
-        AddField(configFrame, "Ende (HH:MM):", ref yPos, 8);
-        AddField(configFrame, "Min Dauer (Min):", ref yPos, 9);
-        AddField(configFrame, "Max Dauer (Min):", ref yPos, 10);
+        AddLabel(scrollView, "=== Mittagspause ===", ref yPos);
+        AddField(scrollView, "Start (HH:MM):", ref yPos, 7);
+        AddField(scrollView, "Ende (HH:MM):", ref yPos, 8);
+        AddField(scrollView, "Min Dauer (Min):", ref yPos, 9);
+        AddField(scrollView, "Max Dauer (Min):", ref yPos, 10);
 
         // Arbeitszeit
         yPos++;
-        AddLabel(configFrame, "=== Arbeitszeit ===", ref yPos);
-        AddField(configFrame, "Start (HH:MM):", ref yPos, 11);
-        AddField(configFrame, "Start Varianz (Min):", ref yPos, 12);
-        AddField(configFrame, "Ende (HH:MM):", ref yPos, 13);
-        AddField(configFrame, "Ende Varianz (Min):", ref yPos, 14);
+        AddLabel(scrollView, "=== Arbeitszeit ===", ref yPos);
+        AddField(scrollView, "Start (HH:MM):", ref yPos, 11);
+        AddField(scrollView, "Start Varianz (Min):", ref yPos, 12);
+        AddField(scrollView, "Ende (HH:MM):", ref yPos, 13);
+        AddField(scrollView, "Ende Varianz (Min):", ref yPos, 14);
+
+        // Debug-Modus
+        yPos++;
+        AddLabel(scrollView, "=== Debug ===", ref yPos);
+        AddDebugCheckbox(scrollView, "Debug-Modus:", ref yPos);
+
+        // ContentSize basierend auf der Anzahl der Zeilen aktualisieren
+        scrollView.ContentSize = new Size(50, yPos + 2);
 
         Add(configFrame);
 
@@ -202,6 +224,24 @@ public class ConfigurationView : Window
         parent.Add(_configFields[fieldIndex]);
     }
 
+    private void AddDebugCheckbox(View parent, string label, ref int yPos)
+    {
+        var lbl = new Label(label)
+        {
+            X = 1,
+            Y = yPos,
+            Width = 25
+        };
+        parent.Add(lbl);
+
+        _debugModeCheckBox = new CheckBox("")
+        {
+            X = 27,
+            Y = yPos++
+        };
+        parent.Add(_debugModeCheckBox);
+    }
+
     private void LoadProfileIntoFields()
     {
         if (_currentProfile == null) return;
@@ -222,6 +262,7 @@ public class ConfigurationView : Window
         _configFields[12].Text = c.WorkStartVarianceMinutes.ToString();
         _configFields[13].Text = c.WorkEndTime?.ToString(@"hh\:mm") ?? "18:00";
         _configFields[14].Text = c.WorkEndVarianceMinutes.ToString();
+        _debugModeCheckBox.Checked = c.DebugMode;
     }
 
     private void SaveCurrentProfile()
@@ -246,6 +287,7 @@ public class ConfigurationView : Window
             c.WorkStartVarianceMinutes = int.Parse(_configFields[12].Text.ToString()!);
             c.WorkEndTime = TimeSpan.Parse(_configFields[13].Text.ToString()!);
             c.WorkEndVarianceMinutes = int.Parse(_configFields[14].Text.ToString()!);
+            c.DebugMode = _debugModeCheckBox.Checked;
 
             _configService.SaveProfile(_currentProfile);
             MessageBox.Query("Erfolg", "Profil gespeichert!", "OK");

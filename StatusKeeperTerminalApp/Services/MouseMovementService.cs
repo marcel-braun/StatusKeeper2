@@ -25,6 +25,16 @@ public class MouseMovementService : IMouseMovementService
         _globalState.IsServiceRunning = true;
         _globalState.AddLog("Mouse Movement Service gestartet");
         
+        if (config.DebugMode)
+        {
+            _globalState.AddLog("DEBUG-MODUS aktiviert - Detailliertes Logging aktiviert");
+            _logger.LogInformation("DEBUG-MODUS aktiviert - Detailliertes Logging aktiviert");
+            
+            // Test-Bewegung ausführen
+            _globalState.AddLog("Führe Test-Bewegung aus...");
+            TestMouseMovement(config);
+        }
+        
         _logger.LogInformation("Mouse Movement Service gestartet");
         _logger.LogInformation($"Arbeitszeit: {config.WorkStartTime:hh\\:mm} (±{config.WorkStartVarianceMinutes}min) bis {config.WorkEndTime?.ToString(@"hh\:mm") ?? "kein Ende"} (±{config.WorkEndVarianceMinutes}min)");
         _logger.LogInformation($"Mittagspause: {config.LunchBreakStart:hh\\:mm} - {config.LunchBreakEnd:hh\\:mm}");
@@ -55,12 +65,32 @@ public class MouseMovementService : IMouseMovementService
                 if (!lunchBreakTaken && IsInLunchBreakWindow(now, config))
                 {
                     var lunchDuration = _random.Next(config.MinLunchBreakMinutes, config.MaxLunchBreakMinutes + 1);
-                    _globalState.AddLog($"Mittagspause startet - Dauer: {lunchDuration} Minuten");
-                    _logger.LogInformation($"Mittagspause startet - Dauer: {lunchDuration} Minuten");
+                    var pauseStartMessage = $"Mittagspause startet um {DateTime.Now:HH:mm:ss} - Dauer: {lunchDuration} Minuten";
+                    
+                    _globalState.AddLog(pauseStartMessage);
+                    _logger.LogInformation(pauseStartMessage);
+                    
+                    if (config.DebugMode)
+                    {
+                        var debugMessage = $"DEBUG: Mittagspause aktiviert - Start: {DateTime.Now:HH:mm:ss}, Ende geplant: {DateTime.Now.AddMinutes(lunchDuration):HH:mm:ss}";
+                        _globalState.AddLog(debugMessage);
+                        _logger.LogInformation(debugMessage);
+                    }
+                    
                     await Task.Delay(TimeSpan.FromMinutes(lunchDuration), token);
                     lunchBreakTaken = true;
-                    _globalState.AddLog("Mittagspause beendet");
-                    _logger.LogInformation("Mittagspause beendet");
+                    
+                    var pauseEndMessage = $"Mittagspause beendet um {DateTime.Now:HH:mm:ss}";
+                    _globalState.AddLog(pauseEndMessage);
+                    _logger.LogInformation(pauseEndMessage);
+                    
+                    if (config.DebugMode)
+                    {
+                        var debugEndMessage = $"DEBUG: Mittagspause deaktiviert um {DateTime.Now:HH:mm:ss}";
+                        _globalState.AddLog(debugEndMessage);
+                        _logger.LogInformation(debugEndMessage);
+                    }
+                    
                     continue;
                 }
 
@@ -70,6 +100,22 @@ public class MouseMovementService : IMouseMovementService
                 {
                     MoveMouse(config);
                     _logger.LogDebug($"Maus bewegt (#{movementCounter})");
+                    
+                    if (config.DebugMode)
+                    {
+                        if (!GetCursorPos(out POINT currentPos))
+                        {
+                            var debugMessage = $"DEBUG: Mausbewegung #{movementCounter} um {DateTime.Now:HH:mm:ss} - Position konnte nicht ermittelt werden";
+                            _globalState.AddLog(debugMessage);
+                            _logger.LogInformation(debugMessage);
+                        }
+                        else
+                        {
+                            var debugMessage = $"DEBUG: Mausbewegung #{movementCounter} um {DateTime.Now:HH:mm:ss} - Position: ({currentPos.X}, {currentPos.Y})";
+                            _globalState.AddLog(debugMessage);
+                            _logger.LogInformation(debugMessage);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -81,20 +127,44 @@ public class MouseMovementService : IMouseMovementService
                 if (ShouldTakeBreak(config))
                 {
                     var breakDuration = _random.Next(config.MinBreakMinutes, config.MaxBreakMinutes + 1);
-                    _globalState.AddLog($"Kurze Pause: {breakDuration} Minuten (nach {movementCounter} Bewegungen)");
-                    _logger.LogInformation($"Kurze Pause: {breakDuration} Minuten (nach {movementCounter} Bewegungen seit letzter Pause)");
+                    var pauseStartMessage = $"Kurze Pause: {breakDuration} Minuten (nach {movementCounter} Bewegungen) - Start: {DateTime.Now:HH:mm:ss}";
+                    
+                    _globalState.AddLog(pauseStartMessage);
+                    _logger.LogInformation(pauseStartMessage);
+                    
+                    if (config.DebugMode)
+                    {
+                        var debugMessage = $"DEBUG: Pause aktiviert - Start: {DateTime.Now:HH:mm:ss}, Ende geplant: {DateTime.Now.AddMinutes(breakDuration):HH:mm:ss}, Dauer: {breakDuration} min";
+                        _globalState.AddLog(debugMessage);
+                        _logger.LogInformation(debugMessage);
+                    }
                     
                     _lastBreakTime = DateTime.Now;
                     await Task.Delay(TimeSpan.FromMinutes(breakDuration), token);
                     movementCounter = 0; // Counter zurücksetzen nach Pause
                     
-                    _globalState.AddLog("Pause beendet");
-                    _logger.LogInformation("Pause beendet");
+                    var pauseEndMessage = $"Pause beendet um {DateTime.Now:HH:mm:ss}";
+                    _globalState.AddLog(pauseEndMessage);
+                    _logger.LogInformation(pauseEndMessage);
+                    
+                    if (config.DebugMode)
+                    {
+                        var debugEndMessage = $"DEBUG: Pause deaktiviert um {DateTime.Now:HH:mm:ss}";
+                        _globalState.AddLog(debugEndMessage);
+                        _logger.LogInformation(debugEndMessage);
+                    }
                 }
                 else
                 {
                     // Normales Intervall mit Varianz
                     var interval = _random.Next(config.MinIntervalSeconds, config.MaxIntervalSeconds + 1);
+                    
+                    if (config.DebugMode)
+                    {
+                        var debugMessage = $"DEBUG: Warte {interval} Sekunden bis zur nächsten Bewegung";
+                        _logger.LogDebug(debugMessage);
+                    }
+                    
                     await Task.Delay(TimeSpan.FromSeconds(interval), token);
                 }
             }
@@ -140,14 +210,25 @@ public class MouseMovementService : IMouseMovementService
         var timeSinceLastBreak = DateTime.Now - _lastBreakTime;
         if (timeSinceLastBreak.TotalMinutes < 45)
         {
-            _logger.LogDebug($"Keine Pause - erst {timeSinceLastBreak.TotalMinutes:F1} Min seit letzter Pause");
+            if (config.DebugMode)
+            {
+                var debugMessage = $"DEBUG: Keine Pause - erst {timeSinceLastBreak.TotalMinutes:F1} Min seit letzter Pause (benötigt: 45 Min)";
+                _logger.LogDebug(debugMessage);
+            }
             return false;
         }
 
         // Reduzierte Wahrscheinlichkeit für realistischere Pausen
         // Ursprüngliche Wahrscheinlichkeit wird durch 3 geteilt für weniger häufige Pausen
         var adjustedProbability = Math.Max(1, config.BreakProbabilityPercent / 3);
-        var shouldBreak = _random.Next(100) < adjustedProbability;
+        var randomValue = _random.Next(100);
+        var shouldBreak = randomValue < adjustedProbability;
+        
+        if (config.DebugMode)
+        {
+            var debugMessage = $"DEBUG: Pausencheck - Zufallswert: {randomValue}/100, Schwellenwert: {adjustedProbability}% → Pause: {(shouldBreak ? "JA" : "NEIN")}";
+            _logger.LogDebug(debugMessage);
+        }
         
         if (shouldBreak)
         {
@@ -155,6 +236,46 @@ public class MouseMovementService : IMouseMovementService
         }
         
         return shouldBreak;
+    }
+
+    private void TestMouseMovement(MouseMovementConfig config)
+    {
+        try
+        {
+            _logger.LogInformation("Starte Test-Bewegung...");
+            _globalState.AddLog("Starte Test-Bewegung...");
+
+            // Aktuelle Position holen
+            if (!GetCursorPos(out POINT startPos))
+            {
+                _globalState.AddLog("FEHLER: Konnte Start-Position nicht ermitteln");
+                return;
+            }
+
+            _globalState.AddLog($"Start-Position: ({startPos.X}, {startPos.Y})");
+
+            // Große, sichtbare Bewegung (50 Pixel nach rechts)
+            var testX = startPos.X + 50;
+            var testY = startPos.Y;
+
+            _globalState.AddLog($"Bewege zu: ({testX}, {testY})");
+            SetCursorPosPlatform(testX, testY, config);
+
+            // Kurz warten
+            System.Threading.Thread.Sleep(1000);
+
+            // Position zurück bewegen
+            _globalState.AddLog($"Bewege zurück zu: ({startPos.X}, {startPos.Y})");
+            SetCursorPosPlatform(startPos.X, startPos.Y, config);
+
+            _globalState.AddLog("Test-Bewegung abgeschlossen");
+        }
+        catch (Exception ex)
+        {
+            var errorMsg = $"Fehler bei Test-Bewegung: {ex.Message}";
+            _logger.LogError(ex, errorMsg);
+            _globalState.AddLog(errorMsg);
+        }
     }
 
     private void MoveMouse(MouseMovementConfig config)
@@ -179,7 +300,34 @@ public class MouseMovementService : IMouseMovementService
         var newX = currentPos.X + deltaX;
         var newY = currentPos.Y + deltaY;
 
-    SetCursorPosPlatform(newX, newY);
+        if (config.DebugMode)
+        {
+            var debugMessage = $"DEBUG: Mausbewegung - Von ({currentPos.X}, {currentPos.Y}) zu ({newX}, {newY}), Delta: ({deltaX:+#;-#;0}, {deltaY:+#;-#;0})";
+            _logger.LogDebug(debugMessage);
+        }
+
+        SetCursorPosPlatform(newX, newY, config);
+        
+        // Verifikation: Position nach der Bewegung prüfen
+        if (config.DebugMode)
+        {
+            System.Threading.Thread.Sleep(10); // Kurz warten für die Bewegung
+            if (GetCursorPos(out POINT verifyPos))
+            {
+                var actualDeltaX = verifyPos.X - currentPos.X;
+                var actualDeltaY = verifyPos.Y - currentPos.Y;
+                var verifyMessage = $"DEBUG: Verifikation - Tatsächliche Position: ({verifyPos.X}, {verifyPos.Y}), Tatsächliches Delta: ({actualDeltaX:+#;-#;0}, {actualDeltaY:+#;-#;0})";
+                _logger.LogDebug(verifyMessage);
+                _globalState.AddLog(verifyMessage);
+                
+                if (verifyPos.X == currentPos.X && verifyPos.Y == currentPos.Y)
+                {
+                    var warningMessage = "WARNUNG: Maus hat sich nicht bewegt!";
+                    _logger.LogWarning(warningMessage);
+                    _globalState.AddLog(warningMessage);
+                }
+            }
+        }
     }
 
     #region Platform-specific Mouse Movement
@@ -208,11 +356,33 @@ public class MouseMovementService : IMouseMovementService
         }
     }
 
-    private void SetCursorPosPlatform(int x, int y)
+    private void SetCursorPosPlatform(int x, int y, MouseMovementConfig config)
     {
         if (OperatingSystem.IsWindows())
         {
-            SetCursorPos(x, y);
+            var success = SetCursorPos(x, y);
+            if (config.DebugMode)
+            {
+                var debugMessage = $"DEBUG: SetCursorPos({x}, {y}) → Erfolg: {success}";
+                _logger.LogDebug(debugMessage);
+                _globalState.AddLog(debugMessage);
+            }
+            
+            // Wenn SetCursorPos fehlschlägt, versuche alternative Methode
+            if (!success)
+            {
+                var errorMessage = "SetCursorPos fehlgeschlagen, versuche alternative Methode";
+                _logger.LogWarning(errorMessage);
+                _globalState.AddLog(errorMessage);
+                
+                var alternativeSuccess = SetCursorPosAlternative(x, y);
+                if (config.DebugMode)
+                {
+                    var altDebugMessage = $"DEBUG: Alternative mouse_event({x}, {y}) → Erfolg: {alternativeSuccess}";
+                    _logger.LogDebug(altDebugMessage);
+                    _globalState.AddLog(altDebugMessage);
+                }
+            }
         }
         else if (OperatingSystem.IsMacOS())
         {
@@ -237,6 +407,41 @@ public class MouseMovementService : IMouseMovementService
 
     [DllImport("user32.dll", EntryPoint = "GetCursorPos")]
     private static extern bool GetCursorPosWindows(out POINT lpPoint);
+
+    // Alternative Windows API für Mausbewegung
+    [DllImport("user32.dll")]
+    private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int nIndex);
+
+    private const uint MOUSEEVENTF_MOVE = 0x0001;
+    private const uint MOUSEEVENTF_ABSOLUTE = 0x8000;
+    private const int SM_CXSCREEN = 0; // Bildschirmbreite
+    private const int SM_CYSCREEN = 1; // Bildschirmhöhe
+
+    // Alternative Methode mit mouse_event
+    private bool SetCursorPosAlternative(int x, int y)
+    {
+        try
+        {
+            // Bildschirmauflösung holen
+            var screenWidth = GetSystemMetrics(SM_CXSCREEN);
+            var screenHeight = GetSystemMetrics(SM_CYSCREEN);
+            
+            // Zu absolute Koordinaten konvertieren (0-65535)
+            uint absoluteX = (uint)((x * 65535) / screenWidth);
+            uint absoluteY = (uint)((y * 65535) / screenHeight);
+            
+            mouse_event(MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE, absoluteX, absoluteY, 0, UIntPtr.Zero);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fehler bei alternativer Mausbewegung");
+            return false;
+        }
+    }
 
     #endregion
 

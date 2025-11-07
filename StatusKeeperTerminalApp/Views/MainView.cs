@@ -10,7 +10,7 @@ public class MainView : Window
     private readonly IGlobalStateService _globalState;
     private Label _statusLabel = null!;
     private Button _startStopButton = null!;
-    private ListView _logView = null!;
+    private TextView _logView = null!;
 
     public MainView(IConfigurationService configService, IMouseMovementService mouseService, IGlobalStateService globalState)
     {
@@ -100,13 +100,17 @@ public class MainView : Window
             Height = Dim.Fill() - 12
         };
 
-        _logView = new ListView(_globalState.Logs)
+        _logView = new TextView()
         {
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
-            Height = Dim.Fill()
+            Height = Dim.Fill(),
+            ReadOnly = true,
+            WordWrap = true,
+            Text = string.Join("\n", _globalState.Logs)
         };
+        
         logFrame.Add(_logView);
         Add(logFrame);
 
@@ -160,10 +164,16 @@ public class MainView : Window
         }
 
         // Log-View aktualisieren
-        _logView.SetSource(_globalState.Logs);
-        if (_globalState.Logs.Count > 0)
+        var logText = string.Join("\n", _globalState.Logs);
+        if (_logView.Text.ToString() != logText)
         {
-            _logView.SelectedItem = _globalState.Logs.Count - 1; // Zum neuesten Log scrollen
+            _logView.Text = logText;
+            
+            // Automatisch zum Ende scrollen, wenn neue Logs hinzugefügt wurden
+            if (_globalState.Logs.Count > 0)
+            {
+                _logView.MoveEnd();
+            }
         }
 
         Application.Refresh();

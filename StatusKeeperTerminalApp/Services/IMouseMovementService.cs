@@ -90,4 +90,10 @@ public class MouseMovementConfig
     /// Varianz für Arbeitsbeginn in Minuten (Standard: ±15 Minuten)
     /// </summary>
     public int WorkStartVarianceMinutes { get; set; } = 15;
+
+    /// <summary>
+    /// Debug-Modus aktivieren (Standard: false)
+    /// Aktiviert detailliertes Logging von Mausbewegungen und Pausen
+    /// </summary>
+    public bool DebugMode { get; set; } = false;
 }
