@@ -9,6 +9,7 @@ public class MouseMovementService : IMouseMovementService
     private readonly IGlobalStateService _globalState;
     private readonly Random _random = new Random();
     private CancellationTokenSource? _cancellationTokenSource;
+    private DateTime _lastBreakTime = DateTime.MinValue;
 
     public MouseMovementService(ILogger<MouseMovementService> logger, IGlobalStateService globalState)
     {
@@ -27,12 +28,14 @@ public class MouseMovementService : IMouseMovementService
         _logger.LogInformation("Mouse Movement Service gestartet");
         _logger.LogInformation($"Arbeitszeit: {config.WorkStartTime:hh\\:mm} (±{config.WorkStartVarianceMinutes}min) bis {config.WorkEndTime?.ToString(@"hh\:mm") ?? "kein Ende"} (±{config.WorkEndVarianceMinutes}min)");
         _logger.LogInformation($"Mittagspause: {config.LunchBreakStart:hh\\:mm} - {config.LunchBreakEnd:hh\\:mm}");
+        _logger.LogInformation($"Pauseneinstellungen: {config.BreakProbabilityPercent}% Wahrscheinlichkeit, {config.MinBreakMinutes}-{config.MaxBreakMinutes} Minuten Dauer");
 
         var actualWorkEnd = CalculateActualWorkEnd(config);
         _globalState.AddLog($"Heutiges Arbeitsende: {actualWorkEnd:hh\\:mm}");
         _logger.LogInformation($"Heutiges Arbeitsende: {actualWorkEnd:hh\\:mm}");
 
         var lunchBreakTaken = false;
+        var movementCounter = 0;
 
         try
         {
@@ -62,10 +65,11 @@ public class MouseMovementService : IMouseMovementService
                 }
 
                 // Normale Mausbewegung
+                movementCounter++;
                 try
                 {
                     MoveMouse(config);
-                    _logger.LogDebug("Maus bewegt");
+                    _logger.LogDebug($"Maus bewegt (#{movementCounter})");
                 }
                 catch (Exception ex)
                 {
@@ -73,13 +77,19 @@ public class MouseMovementService : IMouseMovementService
                     _logger.LogError(ex, "Fehler beim Bewegen der Maus");
                 }
 
-                // Zufällige Pause?
-                if (_random.Next(100) < config.BreakProbabilityPercent)
+                // Prüfung auf zufällige Pause mit verbesserter Logik
+                if (ShouldTakeBreak(config))
                 {
                     var breakDuration = _random.Next(config.MinBreakMinutes, config.MaxBreakMinutes + 1);
-                    _globalState.AddLog($"Kurze Pause: {breakDuration} Minuten");
-                    _logger.LogInformation($"Kurze Pause: {breakDuration} Minuten");
+                    _globalState.AddLog($"Kurze Pause: {breakDuration} Minuten (nach {movementCounter} Bewegungen)");
+                    _logger.LogInformation($"Kurze Pause: {breakDuration} Minuten (nach {movementCounter} Bewegungen seit letzter Pause)");
+                    
+                    _lastBreakTime = DateTime.Now;
                     await Task.Delay(TimeSpan.FromMinutes(breakDuration), token);
+                    movementCounter = 0; // Counter zurücksetzen nach Pause
+                    
+                    _globalState.AddLog("Pause beendet");
+                    _logger.LogInformation("Pause beendet");
                 }
                 else
                 {
@@ -122,6 +132,29 @@ public class MouseMovementService : IMouseMovementService
     private bool IsInLunchBreakWindow(TimeSpan now, MouseMovementConfig config)
     {
         return now >= config.LunchBreakStart && now <= config.LunchBreakEnd;
+    }
+
+    private bool ShouldTakeBreak(MouseMovementConfig config)
+    {
+        // Mindestens 45 Minuten seit der letzten Pause warten (realistischer)
+        var timeSinceLastBreak = DateTime.Now - _lastBreakTime;
+        if (timeSinceLastBreak.TotalMinutes < 45)
+        {
+            _logger.LogDebug($"Keine Pause - erst {timeSinceLastBreak.TotalMinutes:F1} Min seit letzter Pause");
+            return false;
+        }
+
+        // Reduzierte Wahrscheinlichkeit für realistischere Pausen
+        // Ursprüngliche Wahrscheinlichkeit wird durch 3 geteilt für weniger häufige Pausen
+        var adjustedProbability = Math.Max(1, config.BreakProbabilityPercent / 3);
+        var shouldBreak = _random.Next(100) < adjustedProbability;
+        
+        if (shouldBreak)
+        {
+            _logger.LogDebug($"Pause ausgelöst mit {adjustedProbability}% Wahrscheinlichkeit");
+        }
+        
+        return shouldBreak;
     }
 
     private void MoveMouse(MouseMovementConfig config)

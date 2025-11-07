@@ -46,9 +46,10 @@ public class MouseMovementConfig
     public int MaxBreakMinutes { get; set; } = 10;
 
     /// <summary>
-    /// Wahrscheinlichkeit einer Pause in Prozent (Standard: 10)
+    /// Wahrscheinlichkeit einer Pause in Prozent (Standard: 5 - reduziert für realistischere Pausenhäufigkeit)
+    /// Hinweis: Tatsächliche Wahrscheinlichkeit wird durch Cooldown-Logik weiter reduziert
     /// </summary>
-    public int BreakProbabilityPercent { get; set; } = 10;
+    public int BreakProbabilityPercent { get; set; } = 5;
 
     /// <summary>
     /// Start der Mittagspause (Standard: 12:00)
